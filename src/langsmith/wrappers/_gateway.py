@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 from collections.abc import Mapping
 from typing import Any, Optional
@@ -93,21 +94,38 @@ def add_gateway_response_metadata(response: Any) -> None:
     add_gateway_metadata(getattr(response, "headers", None))
 
 
+def _httpx_client_types() -> tuple[tuple[type, ...], tuple[type, ...]]:
+    """Return the sync and async client types of every installed HTTPX backend.
+
+    Provider SDKs choose their backend independently of this package: openai 3.x
+    uses httpx2, while older releases use httpx.
+    """
+    sync_types: list[type] = []
+    async_types: list[type] = []
+    for name in ("httpx2", "httpx"):
+        try:
+            module = importlib.import_module(name)
+        except ImportError:
+            continue
+        sync_types.append(module.Client)
+        async_types.append(module.AsyncClient)
+    return tuple(sync_types), tuple(async_types)
+
+
 def install_gateway_response_hook(client: Any) -> None:
     """Add an httpx response hook that copies gateway metadata to the LLM run."""
     try:
-        import httpx
-
+        sync_types, async_types = _httpx_client_types()
         http_client = getattr(client, "_client", None)
-        if not isinstance(http_client, (httpx.Client, httpx.AsyncClient)):
+        if not isinstance(http_client, sync_types + async_types):
             return
         if getattr(http_client, _HOOK_MARKER, False):
             return
 
         hooks = http_client.event_hooks
-        if isinstance(http_client, httpx.AsyncClient):
+        if isinstance(http_client, async_types):
 
-            async def _async_hook(response: httpx.Response) -> None:
+            async def _async_hook(response: Any) -> None:
                 add_gateway_response_metadata(response)
 
             hooks["response"] = [*hooks.get("response", []), _async_hook]
