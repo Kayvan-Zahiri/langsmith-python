@@ -97,6 +97,7 @@ _CONTEXT_KEYS: dict[str, contextvars.ContextVar] = {
     "client": _context._CLIENT,
     "replicas": run_trees._REPLICAS,
     "distributed_parent_id": run_trees._DISTRIBUTED_PARENT_ID,
+    "retain_child_runs": _context._RETAIN_CHILD_RUNS,
 }
 
 _EXCLUDED_FRAME_FNAME = "langsmith/run_helpers.py"
@@ -160,6 +161,7 @@ def get_tracing_context(
             "client": _context._CLIENT.get(),
             "replicas": run_trees._REPLICAS.get(),
             "distributed_parent_id": run_trees._DISTRIBUTED_PARENT_ID.get(),
+            "retain_child_runs": _context._RETAIN_CHILD_RUNS.get(),
         }
     # When reading from a copied context, dereference the weakref
     result = {k: context.get(v) for k, v in _CONTEXT_KEYS.items()}
@@ -180,6 +182,7 @@ def tracing_context(
     client: Optional[ls_client.Client] = None,
     replicas: Optional[Sequence[Union[WriteReplica, str]]] = None,
     distributed_parent_id: Optional[str] = None,
+    retain_child_runs: Optional[bool] = None,
     **kwargs: Any,
 ) -> Generator[None, None, None]:
     """Set the tracing context for a block of code.
@@ -210,6 +213,10 @@ def tracing_context(
             Example: `[{"api_url": "https://api.example.com", "auth": {"api_key": "key"}, "project_name": "proj"}]`
             or `[{"project_name": "my_experiment", "updates": {"reference_example_id": None}}]`
         distributed_parent_id: The distributed parent ID for distributed tracing. Defaults to None.
+        retain_child_runs: Request in-memory child trees from compatible tracers.
+            Inherits the enclosing context when omitted. Traceable calls with an
+            `on_end` callback automatically request retention for their descendants.
+            Direct SDK `RunTree` child collection is unchanged.
     """
     if kwargs:
         # warn
@@ -251,6 +258,9 @@ def tracing_context(
             "client": client,
             "replicas": replicas,
             "distributed_parent_id": distributed_parent_id_to_use,
+            "retain_child_runs": (
+                retain_child_runs if retain_child_runs is not None else current_context.get("retain_child_runs", False)
+            ),
         }
     )
     try:
@@ -1736,6 +1746,10 @@ def _setup_run(
     outer_metadata = _context._METADATA.get() or _context._GLOBAL_METADATA
     outer_tags = _context._TAGS.get() or _context._GLOBAL_TAGS
     context = copy_context()
+    context.run(
+        _context._RETAIN_CHILD_RUNS.set,
+        _context._RETAIN_CHILD_RUNS.get() or callable(langsmith_extra.get("on_end")),
+    )
     metadata_ = {
         **(langsmith_extra.get("metadata") or {}),
         **(outer_metadata or {}),

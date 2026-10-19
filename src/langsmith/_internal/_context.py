@@ -19,6 +19,7 @@ _METADATA = contextvars.ContextVar[Optional[dict[str, Any]]]("_METADATA", defaul
 
 _TRACING_ENABLED = contextvars.ContextVar[Optional[Union[bool, Literal["local"]]]]("_TRACING_ENABLED", default=None)
 _CLIENT = contextvars.ContextVar[Optional["Client"]]("_CLIENT", default=None)
+_RETAIN_CHILD_RUNS = contextvars.ContextVar[bool]("_RETAIN_CHILD_RUNS", default=False)
 
 # Store a weak reference to the RunTree in the context.
 # This prevents memory leaks when contexts are captured by asyncio operations
