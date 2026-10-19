@@ -19,6 +19,7 @@ _GATEWAY_METADATA_FIELDS = (
     "provider",
     "model",
     "attempts",
+    "attempt_details",
     "fallback_used",
     "guard_applied",
     "guard_redaction_applied",

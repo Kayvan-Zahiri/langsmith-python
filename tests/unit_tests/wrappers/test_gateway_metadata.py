@@ -29,6 +29,7 @@ _EXPECTED_INFO = {
     "provider": "anthropic",
     "model": "claude-sonnet",
     "attempts": 2,
+    "attempt_details": [{"candidate": 1, "status_code": 429}],
     "fallback_used": True,
     "guard_applied": True,
     "guard_redaction_applied": False,
