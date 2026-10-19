@@ -30,9 +30,11 @@ from ...types.sandboxes import (
 )
 from ...types.sandbox_response import SandboxResponse
 from ...types.snapshot_response import SnapshotResponse
+from ...types.proxy_config_param import ProxyConfigParam
 from ...types.service_url_response import ServiceURLResponse
 from ...types.download_url_response import DownloadURLResponse
 from ...types.sandbox_status_response import SandboxStatusResponse
+from ...types.sandbox_mount_config_param import SandboxMountConfigParam
 from ...types.sandboxes.box_list_service_urls_response import BoxListServiceURLsResponse
 
 __all__ = ["BoxesResource", "AsyncBoxesResource"]
@@ -69,10 +71,10 @@ class BoxesResource(SyncAPIResource):
         idle_ttl_seconds: int | Omit = omit,
         labels: Dict[str, str] | Omit = omit,
         mem_bytes: int | Omit = omit,
-        mount_config: box_create_params.MountConfig | Omit = omit,
+        mount_config: SandboxMountConfigParam | Omit = omit,
         name: str | Omit = omit,
         preserve_memory_on_stop: bool | Omit = omit,
-        proxy_config: box_create_params.ProxyConfig | Omit = omit,
+        proxy_config: ProxyConfigParam | Omit = omit,
         restore_memory: bool | Omit = omit,
         run_config: box_create_params.RunConfig | Omit = omit,
         snapshot: str | Omit = omit,
@@ -219,7 +221,7 @@ class BoxesResource(SyncAPIResource):
         idle_ttl_seconds: int | Omit = omit,
         mem_bytes: int | Omit = omit,
         body_name: str | Omit = omit,
-        proxy_config: box_update_params.ProxyConfig | Omit = omit,
+        proxy_config: ProxyConfigParam | Omit = omit,
         run_config: box_update_params.RunConfig | Omit = omit,
         tag_value_ids: SequenceNotStr[str] | Omit = omit,
         vcpus: int | Omit = omit,
@@ -869,10 +871,10 @@ class AsyncBoxesResource(AsyncAPIResource):
         idle_ttl_seconds: int | Omit = omit,
         labels: Dict[str, str] | Omit = omit,
         mem_bytes: int | Omit = omit,
-        mount_config: box_create_params.MountConfig | Omit = omit,
+        mount_config: SandboxMountConfigParam | Omit = omit,
         name: str | Omit = omit,
         preserve_memory_on_stop: bool | Omit = omit,
-        proxy_config: box_create_params.ProxyConfig | Omit = omit,
+        proxy_config: ProxyConfigParam | Omit = omit,
         restore_memory: bool | Omit = omit,
         run_config: box_create_params.RunConfig | Omit = omit,
         snapshot: str | Omit = omit,
@@ -1019,7 +1021,7 @@ class AsyncBoxesResource(AsyncAPIResource):
         idle_ttl_seconds: int | Omit = omit,
         mem_bytes: int | Omit = omit,
         body_name: str | Omit = omit,
-        proxy_config: box_update_params.ProxyConfig | Omit = omit,
+        proxy_config: ProxyConfigParam | Omit = omit,
         run_config: box_update_params.RunConfig | Omit = omit,
         tag_value_ids: SequenceNotStr[str] | Omit = omit,
         vcpus: int | Omit = omit,
