@@ -1745,8 +1745,10 @@ class FeedbackConfigSchema(BaseModel):
     scoring bounds, and valid categories.
     """
 
+    id: Optional[UUID] = None
+    """The ID of this feedback configuration."""
     feedback_key: str
-    """The unique key identifying this feedback configuration."""
+    """The feedback key this configuration applies to."""
     feedback_config: FeedbackConfig
     """The configuration specifying the type, bounds, and categories."""
     tenant_id: UUID
@@ -1755,3 +1757,10 @@ class FeedbackConfigSchema(BaseModel):
     """When this feedback configuration was last modified."""
     is_lower_score_better: Optional[bool] = None
     """Whether a lower score is considered better for this feedback key."""
+    is_enforced: bool = False
+    """Whether this is its key's enforced configuration, which sets the rules
+    for the whole workspace. A key has at most one."""
+    is_first: bool = False
+    """Whether this is its key's first configuration."""
+    is_deleted: bool = False
+    """Whether this configuration is deleted."""
