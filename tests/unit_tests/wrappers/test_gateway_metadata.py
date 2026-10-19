@@ -118,6 +118,7 @@ def test_wrap_openai_adds_flat_filter_keys() -> None:
         "ls_gateway.attempts": 2,
         "ls_gateway.blocking_policies": "No PII, Budget",
     }
+    assert "blocking_policies" not in runs[0].metadata["ls_gateway_info"]
 
 
 async def test_wrap_async_openai_copies_gateway_metadata() -> None:

@@ -16,7 +16,6 @@ _GATEWAY_METADATA_FIELDS = (
     "reason",
     "provider",
     "model",
-    "blocking_policies",
     "attempt_details",
     "fallback_used",
 )
