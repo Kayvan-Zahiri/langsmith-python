@@ -12,44 +12,7 @@ from langsmith.run_trees import RunTree
 
 _GATEWAY_METADATA_HEADER = "x-langsmith-gateway-metadata"
 _GATEWAY_METADATA_KEY = "ls_gateway_info"
-# LangSmith uses request_id to find the gateway's own traces for this call.
-_GATEWAY_METADATA_FIELDS = (
-    "request_id",
-    "outcome",
-    "reason",
-    "provider",
-    "model",
-    "attempts",
-    "attempt_details",
-    "fallback_used",
-    "guard_applied",
-    "guard_redaction_applied",
-)
-# Run search indexes only top-level metadata keys, so the most common filters
-# are also written as flat keys.
-_GATEWAY_FILTER_KEY_PREFIX = "ls_gateway."
 _HOOK_MARKER = "_langsmith_gateway_metadata_hook_installed"
-
-
-def _filter_keys(parsed: dict) -> dict[str, Any]:
-    policies = parsed.get("blocking_policies")
-    blocking = (
-        ", ".join(p["name"] for p in policies if isinstance(p, dict) and isinstance(p.get("name"), str))
-        if isinstance(policies, list)
-        else None
-    )
-    fields = {
-        "request_id": parsed.get("request_id"),
-        "outcome": parsed.get("outcome"),
-        "provider": parsed.get("provider"),
-        "model": parsed.get("selected_model") or parsed.get("model"),
-        "fallback_used": parsed.get("fallback_used"),
-        "attempts": parsed.get("attempts"),
-        # The gateway omits guard_applied when no data policy applied.
-        "guard_applied": parsed.get("guard_applied") is True,
-        "blocking_policies": blocking,
-    }
-    return {_GATEWAY_FILTER_KEY_PREFIX + k: v for k, v in fields.items() if v is not None and v != ""}
 
 
 def _get_header(headers: Any) -> Any:
@@ -80,11 +43,9 @@ def add_gateway_metadata(headers: Any, run: Optional[RunTree] = None) -> None:
         if run is None or run.run_type != "llm":
             return
         parsed = json.loads(raw)
-        if not isinstance(parsed, dict):
+        if not isinstance(parsed, dict) or not parsed:
             return
-        info = {k: parsed[k] for k in _GATEWAY_METADATA_FIELDS if k in parsed}
-        if info:
-            run.add_metadata({_GATEWAY_METADATA_KEY: info, **_filter_keys(parsed)})
+        run.add_metadata({_GATEWAY_METADATA_KEY: parsed})
     except Exception:
         # Gateway metadata must never affect the provider call.
         return

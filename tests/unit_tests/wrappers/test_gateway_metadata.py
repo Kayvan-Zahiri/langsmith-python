@@ -23,17 +23,7 @@ _GATEWAY_HEADER = {
     "guard_redaction_applied": False,
     "source_api_type": "openai",
 }
-_EXPECTED_INFO = {
-    "request_id": _GATEWAY_HEADER["request_id"],
-    "outcome": "success",
-    "provider": "anthropic",
-    "model": "claude-sonnet",
-    "attempts": 2,
-    "attempt_details": [{"candidate": 1, "status_code": 429}],
-    "fallback_used": True,
-    "guard_applied": True,
-    "guard_redaction_applied": False,
-}
+_EXPECTED_INFO = _GATEWAY_HEADER
 _OPENAI_COMPLETION = {
     "id": "chatcmpl-1",
     "object": "chat.completion",
@@ -129,15 +119,12 @@ def test_wrap_openai_copies_gateway_metadata(gateway_header, expected) -> None:
     assert runs[0].metadata.get("ls_gateway_info") == expected
 
 
-def test_wrap_openai_adds_flat_filter_keys() -> None:
+def test_wrap_openai_copies_whole_header() -> None:
     header = {
         **_GATEWAY_HEADER,
         "outcome": "blocked",
         "selected_model": "claude-haiku",
-        "blocking_policies": [
-            {"id": "p1", "name": "No PII", "policy_type": "guard"},
-            {"id": "p2", "name": "Budget", "policy_type": "spend_limit"},
-        ],
+        "blocking_policies": [{"id": "p1", "name": "No PII", "policy_type": "guard"}],
     }
     client = _openai_client(json.dumps(header))
     runs, extra = _capture_run()
@@ -149,34 +136,8 @@ def test_wrap_openai_adds_flat_filter_keys() -> None:
             langsmith_extra=extra,
         )
 
-    flat = {k: v for k, v in runs[0].metadata.items() if k.startswith("ls_gateway.")}
-    assert flat == {
-        "ls_gateway.request_id": header["request_id"],
-        "ls_gateway.outcome": "blocked",
-        "ls_gateway.provider": "anthropic",
-        "ls_gateway.model": "claude-haiku",
-        "ls_gateway.fallback_used": True,
-        "ls_gateway.attempts": 2,
-        "ls_gateway.guard_applied": True,
-        "ls_gateway.blocking_policies": "No PII, Budget",
-    }
-    assert "blocking_policies" not in runs[0].metadata["ls_gateway_info"]
-
-
-def test_guard_applied_filter_key_defaults_to_false() -> None:
-    # The gateway leaves guard_applied out of the header when no data policy applied.
-    header = {"request_id": _GATEWAY_HEADER["request_id"], "outcome": "success"}
-    client = _openai_client(json.dumps(header))
-    runs, extra = _capture_run()
-
-    with tracing_context(enabled=True):
-        client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "hi"}],
-            langsmith_extra=extra,
-        )
-
-    assert runs[0].metadata["ls_gateway.guard_applied"] is False
+    gateway_keys = {k: v for k, v in runs[0].metadata.items() if "gateway" in k}
+    assert gateway_keys == {"ls_gateway_info": header}
 
 
 async def test_wrap_async_openai_copies_gateway_metadata() -> None:
