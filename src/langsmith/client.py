@@ -3253,9 +3253,10 @@ class Client:
         create: Optional[Sequence[Union[ls_schemas.Run, ls_schemas.RunLikeDict, dict]]] = None,
         update: Optional[Sequence[Union[ls_schemas.Run, ls_schemas.RunLikeDict, dict]]] = None,
         *,
+        feedback: Optional[Sequence[Union[ls_schemas.FeedbackCreate, dict]]] = None,
         dangerously_allow_filesystem: bool = False,
     ) -> None:
-        """Batch ingest/upsert multiple runs in the Langsmith system.
+        """Batch ingest/upsert multiple runs and feedback in the Langsmith system.
 
         Args:
             create (Optional[Sequence[Union[ls_schemas.Run, RunLikeDict]]]):
@@ -3264,6 +3265,9 @@ class Client:
             update (Optional[Sequence[Union[ls_schemas.Run, RunLikeDict]]]):
                 A sequence of `Run` objects or equivalent dictionaries representing
                 runs that have already been created and should be updated / patched.
+            feedback (Optional[Sequence[Union[ls_schemas.FeedbackCreate, dict]]]):
+                A sequence of `FeedbackCreate` objects or equivalent dictionaries
+                to be sent in the same request(s) as the runs.
 
         Raises:
             LangsmithAPIError: If there is an error in the API request.
@@ -3272,6 +3276,11 @@ class Client:
 
             The run objects MUST contain the `dotted_order` and `trace_id` fields
             to be accepted by the API.
+
+            Feedback entries MUST contain `key` and `trace_id`. `run_id` defaults
+            to `trace_id`. Feedback is always sent with the default trace
+            retention extension, so `extend_trace_retention=False` is rejected.
+            Use `create_feedback` for that.
 
         Example:
             ```python
@@ -3334,12 +3343,13 @@ class Client:
             client.multipart_ingest(create=runs_to_create, update=runs_to_update)
             ```
         """
-        if not (create or update):
+        if not (create or update or feedback):
             return
         # filter out runs that are not sampled
         create = self._filter_for_sampling(create or EMPTY_SEQ)
         update = self._filter_for_sampling(update or EMPTY_SEQ)
-        if not create and not update:
+        feedback_ops = self._serialize_feedback_batch(feedback or EMPTY_SEQ)
+        if not create and not update and not feedback_ops:
             return
         # transform and convert to dicts
         create_dicts = [self._run_transform(run) for run in create]
@@ -3375,7 +3385,7 @@ class Client:
             else:
                 del run
             update_dicts = standalone_updates
-        if not create_dicts and not update_dicts:
+        if not create_dicts and not update_dicts and not feedback_ops:
             return
         # insert runtime environment
         self._insert_runtime_env(create_dicts)
@@ -3387,6 +3397,7 @@ class Client:
                 itertools.chain(
                     (serialize_run_dict("post", run) for run in create_dicts),
                     (serialize_run_dict("patch", run) for run in update_dicts),
+                    feedback_ops,
                 )
             )
         )
@@ -3397,6 +3408,28 @@ class Client:
 
         # sent the runs in multipart requests
         self._multipart_ingest_ops(serialized_ops)
+
+    def _serialize_feedback_batch(
+        self, feedback: Iterable[Union[ls_schemas.FeedbackCreate, dict]]
+    ) -> list[SerializedFeedbackOperation]:
+        ops: list[SerializedFeedbackOperation] = []
+        for item in feedback:
+            if isinstance(item, ls_schemas.FeedbackCreate):
+                entry = item.model_dump()
+            else:
+                entry = dict(item)
+            if not entry.get("key") or not entry.get("trace_id"):
+                raise ls_utils.LangSmithUserError("Multipart ingest requires key and trace_id to be set in feedback.")
+            if entry.get("extend_trace_retention", True) is False:
+                raise ls_utils.LangSmithUserError(
+                    "Multipart ingest does not support extend_trace_retention=False for feedback; use create_feedback instead."
+                )
+            if not self._should_sample(entry["trace_id"]):
+                continue
+            entry.setdefault("run_id", entry["trace_id"])
+            entry.setdefault("feedback_source", {"type": "api"})
+            ops.append(serialize_feedback_dict(entry))
+        return ops
 
     def _send_multipart_req(
         self,

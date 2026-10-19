@@ -2141,6 +2141,86 @@ def _feedback_client(session: mock.Mock, **flags: bool) -> Client:
     )
 
 
+def _multipart_feedback_parts(session: mock.Mock) -> list[dict]:
+    """Collect the `feedback.<id>` JSON parts sent so far."""
+    out: list[dict] = []
+    for call in session.request.mock_calls:
+        if not (call.args and call.args[1].endswith("runs/multipart")):
+            continue
+        headers, data = call[2]["headers"], call[2]["data"]
+        boundary = parse_options_header(headers["Content-Type"])[1]["boundary"]
+        for part in MultipartParser(io.BytesIO(data), boundary).parts():
+            if part.name.startswith("feedback."):
+                out.append(json.loads(part.value))
+    return out
+
+
+def test_multipart_ingest_sends_feedback_in_one_request() -> None:
+    session = mock.Mock()
+    client = _multipart_client(session)
+    trace_id = uuid.uuid4()
+    batch: list = [{"trace_id": trace_id, "key": f"k{i}", "score": i} for i in range(3)]
+    batch.append(
+        ls_schemas.FeedbackCreate(
+            id=uuid.uuid4(),
+            trace_id=trace_id,
+            run_id=trace_id,
+            key="typed",
+            feedback_source=ls_schemas.APIFeedbackSource(),
+        )
+    )
+
+    client.multipart_ingest(feedback=batch)
+
+    posts = [c for c in session.request.mock_calls if c.args and c.args[1].endswith("runs/multipart")]
+    assert len(posts) == 1
+    parts = _multipart_feedback_parts(session)
+    assert sorted(p["key"] for p in parts) == ["k0", "k1", "k2", "typed"]
+    assert {p["run_id"] for p in parts} == {str(trace_id)}
+    assert all(p["feedback_source"]["type"] == "api" for p in parts)
+
+
+def test_multipart_ingest_sends_runs_and_feedback_together() -> None:
+    session = mock.Mock()
+    client = _multipart_client(session)
+    run = _minimal_run()
+
+    client.multipart_ingest(create=[run], feedback=[{"trace_id": run["trace_id"], "key": "k", "score": 1}])
+
+    posts = [c for c in session.request.mock_calls if c.args and c.args[1].endswith("runs/multipart")]
+    assert len(posts) == 1
+    assert _multipart_parts(session).get("post") is not None
+    assert [p["key"] for p in _multipart_feedback_parts(session)] == ["k"]
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"key": "k"},
+        {"trace_id": uuid.uuid4()},
+        {"trace_id": uuid.uuid4(), "key": "k", "extend_trace_retention": False},
+    ],
+)
+def test_multipart_ingest_rejects_invalid_feedback(entry: dict) -> None:
+    session = mock.Mock()
+    client = _multipart_client(session)
+
+    with pytest.raises(ls_utils.LangSmithUserError):
+        client.multipart_ingest(feedback=[entry])
+
+    session.request.assert_not_called()
+
+
+def test_multipart_ingest_feedback_follows_trace_sampling() -> None:
+    session = mock.Mock()
+    client = _multipart_client(session)
+    client.tracing_sample_rate = 0.0
+
+    client.multipart_ingest(feedback=[{"trace_id": uuid.uuid4(), "key": "k"}])
+
+    session.request.assert_not_called()
+
+
 def test_create_feedback_requires_session_id_when_ch_query_disabled() -> None:
     """SmithDB-only backends cannot locate the run without session_id."""
     session = mock.Mock()
