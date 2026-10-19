@@ -55,14 +55,14 @@ def add_gateway_response_metadata(response: Any) -> None:
     add_gateway_metadata(getattr(response, "headers", None))
 
 
-def _httpx_client_types() -> tuple[tuple[type, ...], tuple[type, ...]]:
+def _httpx_client_types() -> tuple[tuple[type[Any], ...], tuple[type[Any], ...]]:
     """Return the sync and async client types of every installed HTTPX backend.
 
     Provider SDKs choose their backend independently of this package: openai 3.x
     uses httpx2, while older releases use httpx.
     """
-    sync_types: list[type] = []
-    async_types: list[type] = []
+    sync_types: list[type[Any]] = []
+    async_types: list[type[Any]] = []
     for name in ("httpx2", "httpx"):
         try:
             module = importlib.import_module(name)
