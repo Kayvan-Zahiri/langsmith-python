@@ -8572,8 +8572,8 @@ class Client:
         Raises:
             requests.HTTPError: If a conflicting configuration already
                 exists for the given key (HTTP 400).
-            LangSmithError: If is_enforced is set and the caller lacks the
-                feedback-configs:manage-enforced permission (HTTP 403).
+            requests.HTTPError: If is_enforced is set and the caller lacks
+                the feedback-configs:manage-enforced permission (HTTP 403).
 
         Example:
             .. code-block:: python
