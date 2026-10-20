@@ -8571,9 +8571,9 @@ class Client:
 
         Raises:
             requests.HTTPError: If a conflicting configuration already
-                exists for the given key (HTTP 400).
-            requests.HTTPError: If is_enforced is set and the caller lacks
-                the feedback-configs:manage-enforced permission (HTTP 403).
+                exists for the given key (HTTP 400), or if is_enforced is
+                set and the caller lacks the
+                feedback-configs:manage-enforced permission (HTTP 403).
 
         Example:
             .. code-block:: python
@@ -8594,9 +8594,8 @@ class Client:
             "feedback_key": feedback_key,
             "feedback_config": feedback_config,
             "is_lower_score_better": is_lower_score_better,
+            "is_enforced": is_enforced,
         }
-        if is_enforced:
-            body["is_enforced"] = True
         response = self.request_with_retries(
             "POST",
             "/feedback-configs",
@@ -8610,7 +8609,6 @@ class Client:
         *,
         feedback_key: Optional[Sequence[str]] = None,
         name_contains: Optional[str] = None,
-        is_enforced: Optional[bool] = None,
         limit: Optional[int] = None,
         offset: int = 0,
     ) -> Iterator[ls_schemas.FeedbackConfigSchema]:
@@ -8621,9 +8619,6 @@ class Client:
                 Filter by specific feedback keys.
             name_contains (Optional[str]):
                 Filter by substring match on the feedback key.
-            is_enforced (Optional[bool]):
-                Only enforced configurations when True, only unenforced
-                ones when False.
             limit (Optional[int]):
                 The maximum number of configurations to return.
             offset (int):
@@ -8649,8 +8644,6 @@ class Client:
             params["key"] = feedback_key
         if name_contains is not None:
             params["name_contains"] = name_contains
-        if is_enforced is not None:
-            params["is_enforced"] = is_enforced
         for i, config in enumerate(self._get_paginated_list("/feedback-configs", params=params)):
             yield ls_schemas.FeedbackConfigSchema(**config)
             if limit is not None and i + 1 >= limit:
