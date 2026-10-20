@@ -8540,7 +8540,8 @@ class Client:
         feedback_key: str,
         *,
         feedback_config: ls_schemas.FeedbackConfig,
-        is_lower_score_better: Optional[bool] = False,
+        is_lower_score_better: Optional[bool] = None,
+        is_enforced: bool = False,
     ) -> ls_schemas.FeedbackConfigSchema:
         """Create a feedback configuration.
 
@@ -8555,8 +8556,15 @@ class Client:
             feedback_config (FeedbackConfig):
                 The configuration defining type, bounds, and categories.
             is_lower_score_better (Optional[bool]):
-                Whether a lower score is considered better.
-                Defaults to False.
+                Whether a lower score is considered better. When omitted, a
+                key that already has configs keeps its direction, and a new
+                key defaults to False.
+            is_enforced (bool):
+                Create the key's enforced configuration, which sets the
+                rules for the whole workspace. Requires the
+                feedback-configs:manage-enforced permission, which workspace
+                admins have. Fails if the key already has an enforced
+                configuration. Defaults to False.
 
         Returns:
             FeedbackConfigSchema: The created or existing feedback
@@ -8564,7 +8572,9 @@ class Client:
 
         Raises:
             requests.HTTPError: If a conflicting configuration already
-                exists for the given key (HTTP 400).
+                exists for the given key (HTTP 400), or if is_enforced is
+                set and the caller lacks the
+                feedback-configs:manage-enforced permission (HTTP 403).
 
         Example:
             .. code-block:: python
@@ -8584,8 +8594,12 @@ class Client:
         body: dict[str, Any] = {
             "feedback_key": feedback_key,
             "feedback_config": feedback_config,
-            "is_lower_score_better": is_lower_score_better,
+            "is_enforced": is_enforced,
         }
+        # The direction is shared by every config of the key, so only send it
+        # when the caller sets it; otherwise the key keeps its own.
+        if is_lower_score_better is not None:
+            body["is_lower_score_better"] = is_lower_score_better
         response = self.request_with_retries(
             "POST",
             "/feedback-configs",

@@ -1755,3 +1755,6 @@ class FeedbackConfigSchema(BaseModel):
     """When this feedback configuration was last modified."""
     is_lower_score_better: Optional[bool] = None
     """Whether a lower score is considered better for this feedback key."""
+    is_enforced: bool = False
+    """Whether this is its key's enforced configuration, which sets the rules
+    for the whole workspace. A key has at most one."""
