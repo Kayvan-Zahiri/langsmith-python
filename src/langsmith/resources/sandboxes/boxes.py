@@ -30,9 +30,11 @@ from ...types.sandboxes import (
 )
 from ...types.sandbox_response import SandboxResponse
 from ...types.snapshot_response import SnapshotResponse
+from ...types.proxy_config_param import ProxyConfigParam
 from ...types.service_url_response import ServiceURLResponse
 from ...types.download_url_response import DownloadURLResponse
 from ...types.sandbox_status_response import SandboxStatusResponse
+from ...types.sandbox_mount_config_param import SandboxMountConfigParam
 from ...types.sandboxes.box_list_service_urls_response import BoxListServiceURLsResponse
 
 __all__ = ["BoxesResource", "AsyncBoxesResource"]
@@ -69,10 +71,10 @@ class BoxesResource(SyncAPIResource):
         idle_ttl_seconds: int | Omit = omit,
         labels: Dict[str, str] | Omit = omit,
         mem_bytes: int | Omit = omit,
-        mount_config: box_create_params.MountConfig | Omit = omit,
+        mount_config: SandboxMountConfigParam | Omit = omit,
         name: str | Omit = omit,
         preserve_memory_on_stop: bool | Omit = omit,
-        proxy_config: box_create_params.ProxyConfig | Omit = omit,
+        proxy_config: ProxyConfigParam | Omit = omit,
         restore_memory: bool | Omit = omit,
         run_config: box_create_params.RunConfig | Omit = omit,
         snapshot: str | Omit = omit,
@@ -219,7 +221,7 @@ class BoxesResource(SyncAPIResource):
         idle_ttl_seconds: int | Omit = omit,
         mem_bytes: int | Omit = omit,
         body_name: str | Omit = omit,
-        proxy_config: box_update_params.ProxyConfig | Omit = omit,
+        proxy_config: ProxyConfigParam | Omit = omit,
         run_config: box_update_params.RunConfig | Omit = omit,
         tag_value_ids: SequenceNotStr[str] | Omit = omit,
         vcpus: int | Omit = omit,
@@ -411,9 +413,12 @@ class BoxesResource(SyncAPIResource):
         *,
         body_name: str,
         checkpoint: str | Omit = omit,
+        confirm_allow_snapshot_secret_values: bool | Omit = omit,
         description: str | Omit = omit,
         docker_image: str | Omit = omit,
         fs_capacity_bytes: int | Omit = omit,
+        include: List[Literal["all", "mounts", "proxy_config", "env_vars", "resources", "lifecycle", "labels"]]
+        | Omit = omit,
         include_memory: bool | Omit = omit,
         labels: Dict[str, str] | Omit = omit,
         run_config: box_create_snapshot_params.RunConfig | Omit = omit,
@@ -432,12 +437,27 @@ class BoxesResource(SyncAPIResource):
         Args:
           checkpoint: if omitted, creates a fresh checkpoint from the running VM
 
+          confirm_allow_snapshot_secret_values: Must be true when the included settings hold literal secret values (opaque
+              values rather than workspace secret references, and any env var value),
+              acknowledging that the snapshot stores them and every sandbox created from it
+              can use them.
+
           description: Description says what this snapshot's image can do, so a caller can hand it to
               an agent as a capability summary. At most 1024 characters.
 
           docker_image: sandbox-local Docker image to export
 
           fs_capacity_bytes: required for Docker image export unless the sandbox has a capacity
+
+          include: Sandbox settings to carry into the snapshot. Sandboxes created from it start
+              with each carried setting their create request leaves unset: "mounts" (the
+              mount_config, with its auth), "proxy_config", "env_vars", "resources" (CPU and
+              memory), "lifecycle" (idle_ttl_seconds, delete_after_stop_seconds,
+              preserve_memory_on_stop), and "labels" (merged under this request's labels;
+              reserved com.langchain.\\** labels are left out). "all" names every one of these.
+              VM memory is captured with include_memory, not here. Warning: mounts,
+              proxy_config and env_vars carry the sandbox's credentials, and every sandbox
+              created from the snapshot can use them.
 
           include_memory: IncludeMemory, when true, captures a full VM memory snapshot alongside the
               filesystem clone. Only honored when the sandbox is running AND Checkpoint is
@@ -468,9 +488,11 @@ class BoxesResource(SyncAPIResource):
                 {
                     "body_name": body_name,
                     "checkpoint": checkpoint,
+                    "confirm_allow_snapshot_secret_values": confirm_allow_snapshot_secret_values,
                     "description": description,
                     "docker_image": docker_image,
                     "fs_capacity_bytes": fs_capacity_bytes,
+                    "include": include,
                     "include_memory": include_memory,
                     "labels": labels,
                     "run_config": run_config,
@@ -869,10 +891,10 @@ class AsyncBoxesResource(AsyncAPIResource):
         idle_ttl_seconds: int | Omit = omit,
         labels: Dict[str, str] | Omit = omit,
         mem_bytes: int | Omit = omit,
-        mount_config: box_create_params.MountConfig | Omit = omit,
+        mount_config: SandboxMountConfigParam | Omit = omit,
         name: str | Omit = omit,
         preserve_memory_on_stop: bool | Omit = omit,
-        proxy_config: box_create_params.ProxyConfig | Omit = omit,
+        proxy_config: ProxyConfigParam | Omit = omit,
         restore_memory: bool | Omit = omit,
         run_config: box_create_params.RunConfig | Omit = omit,
         snapshot: str | Omit = omit,
@@ -1019,7 +1041,7 @@ class AsyncBoxesResource(AsyncAPIResource):
         idle_ttl_seconds: int | Omit = omit,
         mem_bytes: int | Omit = omit,
         body_name: str | Omit = omit,
-        proxy_config: box_update_params.ProxyConfig | Omit = omit,
+        proxy_config: ProxyConfigParam | Omit = omit,
         run_config: box_update_params.RunConfig | Omit = omit,
         tag_value_ids: SequenceNotStr[str] | Omit = omit,
         vcpus: int | Omit = omit,
@@ -1211,9 +1233,12 @@ class AsyncBoxesResource(AsyncAPIResource):
         *,
         body_name: str,
         checkpoint: str | Omit = omit,
+        confirm_allow_snapshot_secret_values: bool | Omit = omit,
         description: str | Omit = omit,
         docker_image: str | Omit = omit,
         fs_capacity_bytes: int | Omit = omit,
+        include: List[Literal["all", "mounts", "proxy_config", "env_vars", "resources", "lifecycle", "labels"]]
+        | Omit = omit,
         include_memory: bool | Omit = omit,
         labels: Dict[str, str] | Omit = omit,
         run_config: box_create_snapshot_params.RunConfig | Omit = omit,
@@ -1232,12 +1257,27 @@ class AsyncBoxesResource(AsyncAPIResource):
         Args:
           checkpoint: if omitted, creates a fresh checkpoint from the running VM
 
+          confirm_allow_snapshot_secret_values: Must be true when the included settings hold literal secret values (opaque
+              values rather than workspace secret references, and any env var value),
+              acknowledging that the snapshot stores them and every sandbox created from it
+              can use them.
+
           description: Description says what this snapshot's image can do, so a caller can hand it to
               an agent as a capability summary. At most 1024 characters.
 
           docker_image: sandbox-local Docker image to export
 
           fs_capacity_bytes: required for Docker image export unless the sandbox has a capacity
+
+          include: Sandbox settings to carry into the snapshot. Sandboxes created from it start
+              with each carried setting their create request leaves unset: "mounts" (the
+              mount_config, with its auth), "proxy_config", "env_vars", "resources" (CPU and
+              memory), "lifecycle" (idle_ttl_seconds, delete_after_stop_seconds,
+              preserve_memory_on_stop), and "labels" (merged under this request's labels;
+              reserved com.langchain.\\** labels are left out). "all" names every one of these.
+              VM memory is captured with include_memory, not here. Warning: mounts,
+              proxy_config and env_vars carry the sandbox's credentials, and every sandbox
+              created from the snapshot can use them.
 
           include_memory: IncludeMemory, when true, captures a full VM memory snapshot alongside the
               filesystem clone. Only honored when the sandbox is running AND Checkpoint is
@@ -1268,9 +1308,11 @@ class AsyncBoxesResource(AsyncAPIResource):
                 {
                     "body_name": body_name,
                     "checkpoint": checkpoint,
+                    "confirm_allow_snapshot_secret_values": confirm_allow_snapshot_secret_values,
                     "description": description,
                     "docker_image": docker_image,
                     "fs_capacity_bytes": fs_capacity_bytes,
+                    "include": include,
                     "include_memory": include_memory,
                     "labels": labels,
                     "run_config": run_config,
