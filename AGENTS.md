@@ -1,6 +1,6 @@
 # Instructions for code modifications in the Python SDK
 
-The LangSmith Python SDK source is `sdks/python` in langchainplus: the hand-written client (tracing, run trees, evaluation, sandbox, wrappers, integrations) on top of a Stainless-generated REST client. Both live under `src/langsmith/`. Edit it there. A merge to langchainplus main that changes `sdks/python` opens a Copybara pull request on `langsmith-python`.
+The LangSmith Python SDK source is `sdks/python` in langchainplus: the hand-written client (tracing, run trees, evaluation, sandbox, wrappers, integrations) on top of a Stainless-generated REST client. Both live under `src/langsmith/`. Edit it there. A merge to langchainplus main that changes `sdks/python` is pushed to `langsmith-python` main.
 
 ## External contributor PRs
 
