@@ -87,6 +87,6 @@ Format and lint with:
 
 ## Open a pull request
 
-External contributors should open issues and pull requests in the public `langsmith-python` repository. Staging is internal; maintainers review and port accepted changes while preserving contributor credit.
+External contributors should open issues and pull requests in the public `langsmith-python` repository. Maintainers make the same change in `sdks/python` in langchainplus so the next export does not revert it. An urgent production fix uses the `skip-pr-source-check` label.
 
-Internal development PRs target `langsmith-python-staging`. Production releases are promoted and published from `langsmith-python`; do not change package versions or publish directly from staging.
+Internal changes go in `sdks/python` in langchainplus. After that pull request merges, Copybara opens a pull request on `langsmith-python`. Do not hand-edit the version in `pyproject.toml`, `src/langsmith/_version.py`, or `.release-please-manifest.json`; release-please writes those on `langsmith-python`.

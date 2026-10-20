@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Dict
-from typing_extensions import Required, Annotated, TypedDict
+from typing import Dict, List
+from typing_extensions import Literal, Required, Annotated, TypedDict
 
 from ..._utils import PropertyInfo
 
@@ -16,6 +16,14 @@ class BoxCreateSnapshotParams(TypedDict, total=False):
     checkpoint: str
     """if omitted, creates a fresh checkpoint from the running VM"""
 
+    confirm_allow_snapshot_secret_values: bool
+    """
+    Must be true when the included settings hold literal secret values (opaque
+    values rather than workspace secret references, and any env var value),
+    acknowledging that the snapshot stores them and every sandbox created from it
+    can use them.
+    """
+
     description: str
     """
     Description says what this snapshot's image can do, so a caller can hand it to
@@ -27,6 +35,19 @@ class BoxCreateSnapshotParams(TypedDict, total=False):
 
     fs_capacity_bytes: int
     """required for Docker image export unless the sandbox has a capacity"""
+
+    include: List[Literal["all", "mounts", "proxy_config", "env_vars", "resources", "lifecycle", "labels"]]
+    """Sandbox settings to carry into the snapshot.
+
+    Sandboxes created from it start with each carried setting their create request
+    leaves unset: "mounts" (the mount_config, with its auth), "proxy_config",
+    "env_vars", "resources" (CPU and memory), "lifecycle" (idle_ttl_seconds,
+    delete_after_stop_seconds, preserve_memory_on_stop), and "labels" (merged under
+    this request's labels; reserved com.langchain.\\** labels are left out). "all"
+    names every one of these. VM memory is captured with include_memory, not here.
+    Warning: mounts, proxy_config and env_vars carry the sandbox's credentials, and
+    every sandbox created from the snapshot can use them.
+    """
 
     include_memory: bool
     """

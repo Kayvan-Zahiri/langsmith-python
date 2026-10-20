@@ -341,7 +341,9 @@ Types:
 ```python
 from langsmith.types import (
     DownloadURLResponse,
+    ProxyConfig,
     SandboxListResponse,
+    SandboxMountConfig,
     SandboxResponse,
     SandboxStatusResponse,
     ServiceURLResponse,
