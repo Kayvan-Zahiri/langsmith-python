@@ -1645,7 +1645,8 @@ class AsyncClient:
         feedback_key: str,
         *,
         feedback_config: ls_schemas.FeedbackConfig,
-        is_lower_score_better: Optional[bool] = False,
+        is_lower_score_better: Optional[bool] = None,
+        is_enforced: bool = False,
     ) -> ls_schemas.FeedbackConfigSchema:
         """Create a feedback configuration.
 
@@ -1659,7 +1660,13 @@ class AsyncClient:
             feedback_config: The configuration defining type, bounds,
                 and categories.
             is_lower_score_better: Whether a lower score is considered
-                better. Defaults to False.
+                better. When omitted, a key that already has configs keeps its
+                direction, and a new key defaults to False.
+            is_enforced: Create the key's enforced configuration, which sets
+                the rules for the whole workspace. Requires the
+                feedback-configs:manage-enforced permission, which workspace
+                admins have. Fails if the key already has an enforced
+                configuration. Defaults to False.
 
         Returns:
             The created or existing feedback configuration.
@@ -1667,8 +1674,12 @@ class AsyncClient:
         body: dict[str, Any] = {
             "feedback_key": feedback_key,
             "feedback_config": feedback_config,
-            "is_lower_score_better": is_lower_score_better,
+            "is_enforced": is_enforced,
         }
+        # The direction is shared by every config of the key, so only send it
+        # when the caller sets it; otherwise the key keeps its own.
+        if is_lower_score_better is not None:
+            body["is_lower_score_better"] = is_lower_score_better
         response = await self._arequest_with_retries(
             "POST",
             "/feedback-configs",
