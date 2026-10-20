@@ -34,7 +34,7 @@ Hand-written files are everything not listed in `python.files`. `langdev sdks ge
 
 ## Releasing
 
-Releases are cut by release-please from conventional commits on `main`. Do not hand-edit the version in `pyproject.toml`, `src/langsmith/_version.py` or `.release-please-manifest.json`, and do not push tags.
+Releases are cut by release-please from conventional commits on `langsmith-python` main. Dependency edits in `pyproject.toml` are exported. Do not change the version line in `pyproject.toml`, `src/langsmith/_version.py`, or `.release-please-manifest.json`, and do not push tags.
 
 ## Conventions
 
