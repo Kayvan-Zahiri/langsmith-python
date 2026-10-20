@@ -1034,12 +1034,34 @@ class AsyncClient:
     async def create_example(
         self,
         inputs: dict[str, Any],
-        outputs: Optional[dict[str, Any]] = None,
+        reference_outputs: Optional[dict[str, Any]] = cast(Any, ls_client._UNSET),
         dataset_id: Optional[ls_client.ID_TYPE] = None,
         dataset_name: Optional[str] = None,
+        *,
+        outputs: Optional[dict[str, Any]] = cast(Any, ls_client._UNSET),
         **kwargs: Any,
     ) -> ls_schemas.Example:
-        """Create an example."""
+        """Create an example with optional reference outputs.
+
+        Args:
+            inputs: The input values for the example.
+            reference_outputs: The reference output values for the example.
+            dataset_id: The ID of the dataset.
+            dataset_name: The name of the dataset.
+            outputs: Deprecated alias for reference_outputs.
+            **kwargs: Additional example fields.
+        """
+        if reference_outputs is not ls_client._UNSET and outputs is not ls_client._UNSET:
+            raise ValueError("Cannot specify both 'reference_outputs' and 'outputs'.")
+        if outputs is not ls_client._UNSET:
+            warnings.warn(
+                "'outputs' is deprecated. Use 'reference_outputs' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            reference_outputs = outputs
+        elif reference_outputs is ls_client._UNSET:
+            reference_outputs = None
         if dataset_id is None and dataset_name is None:
             raise ValueError("Either dataset_id or dataset_name must be provided")
         if dataset_id is None:
@@ -1048,7 +1070,7 @@ class AsyncClient:
 
         data = {
             "inputs": inputs,
-            "outputs": outputs,
+            "outputs": reference_outputs,
             "dataset_id": str(dataset_id),
             **kwargs,
         }
