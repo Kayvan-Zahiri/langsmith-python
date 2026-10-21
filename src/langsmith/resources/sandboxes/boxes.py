@@ -650,6 +650,7 @@ class BoxesResource(SyncAPIResource):
         name: str,
         *,
         access: Literal["restricted", "workspace", "off"] | Omit = omit,
+        embed_origins: SequenceNotStr[str] | Omit = omit,
         expires_in_seconds: int | Omit = omit,
         port: int | Omit = omit,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
@@ -665,8 +666,10 @@ class BoxesResource(SyncAPIResource):
         service_url (for use with the X-Langsmith-Sandbox-Service-Token header), the raw
         token, and its expiry. Set access=restricted|workspace to instead enable durable
         LangSmith login (no token; users authenticate with their normal LangSmith
-        session), or access=off to disable it. LangSmith login and token access are
-        mutually exclusive per service URL.
+        session), or access=off to disable it. With LangSmith login, embed_origins names
+        the pages that may show the URL in an iframe; a viewer signs in from inside the
+        frame through a LangSmith popup. LangSmith login and token access are mutually
+        exclusive per service URL.
 
         Args:
           access: Access selects the login mode, mutually exclusive with the minted token. Omit
@@ -676,6 +679,12 @@ class BoxesResource(SyncAPIResource):
               member of the owning workspace. "off" — remove an existing LangSmith login grant
               and mint a token. A LangSmith login grant is durable; token mode is refused
               (409) while one exists.
+
+          embed_origins: EmbedOrigins are the pages allowed to show a LangSmith login service URL in an
+              iframe, besides LangSmith itself: at most 5 origins such as
+              https://app.example.com (http only for localhost). Valid only with access
+              "restricted" or "workspace". Each call sets the URL's whole list, so omitting
+              the field removes any origins set before.
 
           extra_headers: Send extra headers
 
@@ -692,6 +701,7 @@ class BoxesResource(SyncAPIResource):
             body=maybe_transform(
                 {
                     "access": access,
+                    "embed_origins": embed_origins,
                     "expires_in_seconds": expires_in_seconds,
                     "port": port,
                 },
@@ -1472,6 +1482,7 @@ class AsyncBoxesResource(AsyncAPIResource):
         name: str,
         *,
         access: Literal["restricted", "workspace", "off"] | Omit = omit,
+        embed_origins: SequenceNotStr[str] | Omit = omit,
         expires_in_seconds: int | Omit = omit,
         port: int | Omit = omit,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
@@ -1487,8 +1498,10 @@ class AsyncBoxesResource(AsyncAPIResource):
         service_url (for use with the X-Langsmith-Sandbox-Service-Token header), the raw
         token, and its expiry. Set access=restricted|workspace to instead enable durable
         LangSmith login (no token; users authenticate with their normal LangSmith
-        session), or access=off to disable it. LangSmith login and token access are
-        mutually exclusive per service URL.
+        session), or access=off to disable it. With LangSmith login, embed_origins names
+        the pages that may show the URL in an iframe; a viewer signs in from inside the
+        frame through a LangSmith popup. LangSmith login and token access are mutually
+        exclusive per service URL.
 
         Args:
           access: Access selects the login mode, mutually exclusive with the minted token. Omit
@@ -1498,6 +1511,12 @@ class AsyncBoxesResource(AsyncAPIResource):
               member of the owning workspace. "off" — remove an existing LangSmith login grant
               and mint a token. A LangSmith login grant is durable; token mode is refused
               (409) while one exists.
+
+          embed_origins: EmbedOrigins are the pages allowed to show a LangSmith login service URL in an
+              iframe, besides LangSmith itself: at most 5 origins such as
+              https://app.example.com (http only for localhost). Valid only with access
+              "restricted" or "workspace". Each call sets the URL's whole list, so omitting
+              the field removes any origins set before.
 
           extra_headers: Send extra headers
 
@@ -1514,6 +1533,7 @@ class AsyncBoxesResource(AsyncAPIResource):
             body=await async_maybe_transform(
                 {
                     "access": access,
+                    "embed_origins": embed_origins,
                     "expires_in_seconds": expires_in_seconds,
                     "port": port,
                 },

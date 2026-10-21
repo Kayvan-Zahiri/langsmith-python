@@ -662,6 +662,7 @@ class TestBoxes:
         box = client.sandboxes.boxes.generate_service_url(
             name="name",
             access="restricted",
+            embed_origins=["string"],
             expires_in_seconds=0,
             port=0,
         )
@@ -1525,6 +1526,7 @@ class TestAsyncBoxes:
         box = await async_client.sandboxes.boxes.generate_service_url(
             name="name",
             access="restricted",
+            embed_origins=["string"],
             expires_in_seconds=0,
             port=0,
         )
