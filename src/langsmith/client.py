@@ -13,6 +13,7 @@ For detailed API documentation, visit the [LangSmith docs](https://docs.langchai
 from __future__ import annotations
 
 import atexit
+import asyncio
 import base64
 import collections
 import concurrent.futures as cf
@@ -70,6 +71,7 @@ from langsmith import schemas as ls_schemas
 from langsmith import utils as ls_utils
 from langsmith._internal import (
     _addressing,
+    _openapi_auth,
     _orjson,
     _profiles,
     _v2_migration_utils,
@@ -123,8 +125,8 @@ from langsmith._internal._sampling import is_sampled_by_id
 from langsmith._internal._serde import dumps_json as _dumps_json
 from langsmith._internal._uuid import uuid7
 from langsmith._internal._v2_migration_utils import QueryBackend, get_query_backend
-from langsmith import AsyncLangsmith as LangsmithOpenAPIClient
-from langsmith import Langsmith as SyncLangsmithOpenAPIClient
+from langsmith._internal._openapi_auth import AsyncClient as LangsmithOpenAPIClient
+from langsmith._internal._openapi_auth import SyncClient as SyncLangsmithOpenAPIClient
 from langsmith._base_client import (
     AsyncHttpxClientWrapper as _AsyncHttpxClientWrapper,
 )
@@ -335,6 +337,7 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from langsmith.resources.agents import AgentsResource
     import pandas as pd  # type: ignore
     from langchain_core.runnables import Runnable
 
@@ -1531,11 +1534,12 @@ class Client:
                     **_httpx_kwargs_from_session(self.session),
                 )
             self._langsmith_api = LangsmithOpenAPIClient(
+                header_provider=self._aget_openapi_headers,
                 api_key=self._api_key,
                 tenant_id=str(self._workspace_id) if self._workspace_id else None,
                 base_url=base_url,
                 timeout=timeout,
-                default_headers=self._headers or None,
+                default_headers=_openapi_auth._normalize_headers(self._headers) or None,
                 http_client=http_client,
             )
         return self._langsmith_api
@@ -1552,14 +1556,24 @@ class Client:
                     **_httpx_kwargs_from_session(self.session),
                 )
             self._langsmith_api_sync = SyncLangsmithOpenAPIClient(
+                header_provider=self._current_openapi_headers,
                 api_key=self._api_key,
                 tenant_id=str(self._workspace_id) if self._workspace_id else None,
                 base_url=base_url,
                 timeout=timeout,
-                default_headers=self._headers or None,
+                default_headers=_openapi_auth._normalize_headers(self._headers) or None,
                 http_client=http_client,
             )
         return self._langsmith_api_sync
+
+    def _current_openapi_headers(self) -> dict[str, str]:
+        self._ensure_profile_auth()
+        return _openapi_auth._normalize_headers(self._compute_headers())
+
+    async def _aget_openapi_headers(self) -> dict[str, str]:
+        if not self.api_key and self._profile_auth is not None:
+            await asyncio.to_thread(self._ensure_profile_auth)
+        return _openapi_auth._normalize_headers(self._compute_headers())
 
     @property
     def runs(self) -> AsyncRunsResource:
@@ -1609,6 +1623,14 @@ class Client:
         """(beta) Access the sessions resource (resolve an address to its project)."""
         _check_backend_version(self.info.version, min_version="0.18.0")
         return self._get_langsmith_api().sessions
+
+    @property
+    def agents(self) -> AgentsResource:
+        """Manage workspace registry agents and their tracing destinations.
+
+        Deleting an agent also deletes its tracing history and linked runtimes.
+        """
+        return self._get_langsmith_api_sync().agents
 
     @property
     def public(self) -> AsyncPublicResource:

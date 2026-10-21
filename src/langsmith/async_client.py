@@ -21,7 +21,7 @@ from typing import (
 )
 
 import langsmith
-import langsmith as _langsmith_api_module
+from langsmith._internal import _openapi_auth
 from langsmith._internal._beta_decorator import deprecated as _deprecated
 from langsmith._internal._beta_decorator import (
     suppress_deprecation_warning as _suppress_deprecation_warning,
@@ -30,6 +30,7 @@ from langsmith._httpx import httpx
 from langsmith.client import _get_openapi_base_url
 
 if TYPE_CHECKING:
+    from langsmith.resources.agents import AsyncAgentsResource
     from langsmith.resources.runs import AsyncRunsResource
 
 from langsmith import client as ls_client
@@ -302,12 +303,13 @@ class AsyncClient:
         else:
             self._cache = None
 
-        self._langsmith_api = _langsmith_api_module.AsyncLangsmith(
+        self._langsmith_api = _openapi_auth.AsyncClient(
+            header_provider=self._current_openapi_headers,
             api_key=self._api_key,
             tenant_id=self._workspace_id,
             base_url=_get_openapi_base_url(str(self._client.base_url)),
             timeout=self._client.timeout,
-            default_headers=_headers or None,
+            default_headers=_openapi_auth._normalize_headers(_headers) or None,
         )
 
     # ------------------------------------------------------------------
@@ -384,6 +386,14 @@ class AsyncClient:
         return self._langsmith_api.traces
 
     @property
+    def agents(self) -> AsyncAgentsResource:
+        """Manage workspace registry agents and their tracing destinations.
+
+        Deleting an agent also deletes its tracing history and linked runtimes.
+        """
+        return self._langsmith_api.agents
+
+    @property
     def public(self) -> AsyncPublicResource:
         """Access the public shared-run resource."""
         self._schedule_backend_version_check("0.16.0")
@@ -432,6 +442,10 @@ class AsyncClient:
         self._profile_auth_headers = auth_headers
         self._oauth_access_token = self._profile_auth.oauth_access_token
         self._client.headers = httpx.Headers(self._compute_headers())
+
+    async def _current_openapi_headers(self) -> dict[str, str]:
+        await self._ensure_profile_auth()
+        return _openapi_auth._normalize_headers(self._compute_headers())
 
     async def _arequest_with_retries(
         self,

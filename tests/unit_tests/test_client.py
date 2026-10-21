@@ -979,7 +979,7 @@ def test_annotation_queues_uses_generated_openapi_resource() -> None:
 def test_async_evaluators_uses_generated_openapi_resource() -> None:
     resource = object()
 
-    with mock.patch("langsmith.AsyncLangsmith") as openapi_client:
+    with mock.patch("langsmith.async_client._openapi_auth.AsyncClient") as openapi_client:
         openapi_client.return_value.online_evaluators = resource
 
         client = AsyncClient(
@@ -1004,7 +1004,7 @@ def test_async_evaluators_uses_generated_openapi_resource() -> None:
 def test_async_annotation_queues_uses_generated_openapi_resource() -> None:
     resource = object()
 
-    with mock.patch("langsmith.AsyncLangsmith") as openapi_client:
+    with mock.patch("langsmith.async_client._openapi_auth.AsyncClient") as openapi_client:
         openapi_client.return_value.annotation_queues = resource
 
         client = AsyncClient(
