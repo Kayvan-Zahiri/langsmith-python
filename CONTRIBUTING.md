@@ -26,7 +26,7 @@ source .venv/bin/activate
 
 Most of the SDK is generated from the LangSmith API definition by Stainless. Do not edit generated files directly. CI rejects changes to files marked `File generated from our OpenAPI spec by Stainless.`
 
-Handwritten client code spans `src/langsmith/`, including `client.py`, `run_trees.py`, `evaluation/`, and `sandbox/`; the `stlc-seal-custom-code` workflow preserves it through regeneration. Check the generated-file marker before editing: marked files should be changed in the API definition or `stainless.yml`, not directly. Handwritten examples belong in `examples/`.
+Handwritten client code spans `src/langsmith/`, including `client.py`, `run_trees.py`, `evaluation/`, and `sandbox/`; `langdev sdks gen python` in langchainplus preserves it through regeneration. Check the generated-file marker before editing: marked files should be changed in the API definition or `stainless.yml`, not directly. Handwritten examples belong in `examples/`.
 
 ## Add or run an example
 
